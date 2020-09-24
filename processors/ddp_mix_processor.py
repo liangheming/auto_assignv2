@@ -9,7 +9,7 @@ from torch.cuda import amp
 from torch.utils.data.distributed import DistributedSampler
 from datasets.coco import COCODataSets
 from nets.fcos import FCOS
-from losses.auto_assign_loss import FCOSAutoAssignLossBak
+from losses.auto_assign_loss import FCOSAutoAssignLoss
 from torch.utils.data.dataloader import DataLoader
 from utils.fcos import non_max_suppression
 from commons.model_utils import rand_seed, is_parallel, ModelEMA, freeze_bn
@@ -87,7 +87,7 @@ class DDPMixProcessor(object):
         self.optimizer = optimizer
         self.ema = ModelEMA(self.model)
 
-        self.creterion = FCOSAutoAssignLossBak(
+        self.creterion = FCOSAutoAssignLoss(
             alpha=self.hyper_params['alpha'],
             gamma=self.hyper_params['gamma'],
             strides=self.model_cfg['strides'],
