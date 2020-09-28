@@ -12,7 +12,7 @@ class FCOSAutoAssignLoss(object):
                  temperature=1. / 3,
                  strides=None,
                  iou_type='giou',
-                 positive_weights=0.16,
+                 positive_weights=0.1,
                  negative_weights=1.0):
         self.alpha = alpha
         self.gamma = gamma
@@ -95,6 +95,8 @@ class FCOSAutoAssignLoss(object):
                 grid_idx_mask = gt_idx == unique_gt_idx
                 instance_weights = positive_weights[grid_idx_mask] / positive_weights[grid_idx_mask].sum()
                 instance_loss = -(instance_weights * joint_prob[grid_idx_mask]).sum().log()
+                # positive_prop = (instance_weights * joint_prob[grid_idx_mask]).sum()
+                # instance_loss = -self.alpha * (1 - positive_prop) ** self.gamma * positive_prop.log()
                 positive_loss += instance_loss
             positive_loss_list.append(positive_loss)
 
