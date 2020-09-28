@@ -1,4 +1,4 @@
-model_name: auto_assign_weights
+model_name: auto_assign_1_10
 data:
   train_annotation_path: /home/thunisoft-root/liangheming/data/coco/coco2017/annotations/instances_train2017.json
 #  train_annotation_path: /home/thunisoft-root/liangheming/data/coco/coco2017/annotations/instances_val2017.json

@@ -86,7 +86,7 @@ class FCOSAutoAssignLoss(object):
             iou_loss = self.iou_loss_func(batch_box_predicts[grid_idx, :], batch_reg_targets[grid_idx, gt_idx, :])
             loc_prob = (-self.lambda_p * iou_loss).exp()
             joint_prob = cls_prob * loc_prob
-            confidence = (joint_prob.detach() / self.temperature).exp()
+            confidence = (joint_prob / self.temperature).exp()
             gaussian_delta_mu = -(
                     (xy_offset[grid_idx, gt_idx, :] - gaussian[batch_targets[gt_idx, 1].long(), :2]) ** 2
             ).sum(-1)
