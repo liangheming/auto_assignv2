@@ -39,6 +39,7 @@ class FCOSAutoAssignLoss(object):
         device = cls_predicts[0].device
         bs = cls_predicts[0].shape[0]
         cls_num = cls_predicts[0].shape[1]
+        # expand_grid [grid_num,3](xc,yc,stride)
         expand_grid = torch.cat([
             torch.cat([
                 grid_item,
@@ -50,17 +51,20 @@ class FCOSAutoAssignLoss(object):
         for i in range(len(implicits)):
             if implicits[i].dtype == torch.float16:
                 implicits[i] = implicits[i].float()
-        # expand_grid [grid_num,3](xc,yc,stride)
         negative_loss_list = list()
         positive_loss_list = list()
         for bi in range(bs):
+            # batch_cls_predicts [grid_num,cls_num]
             batch_cls_predicts = torch.cat(
                 [cls_item[bi].permute(1, 2, 0).contiguous().view(-1, cls_num) for cls_item in cls_predicts],
                 dim=0).sigmoid()
+            # batch_implicit [grid_num,1]
             batch_implicit = torch.cat(
                 [implicit_item[bi].permute(1, 2, 0).contiguous().view(-1, 1) for implicit_item in implicits],
                 dim=0).sigmoid()
+
             batch_join_predicts = (batch_cls_predicts * batch_implicit).clamp(1e-6, 1 - 1e-6)
+            # batch_box_predicts [grid_num, 4]
             batch_box_predicts = torch.cat(
                 [box_item[bi].permute(1, 2, 0).contiguous().view(-1, 4) for box_item in box_predicts], dim=0)
             batch_targets = targets[targets[:, 0] == bi, 1:]
@@ -82,21 +86,18 @@ class FCOSAutoAssignLoss(object):
             iou_loss = self.iou_loss_func(batch_box_predicts[grid_idx, :], batch_reg_targets[grid_idx, gt_idx, :])
             loc_prob = (-self.lambda_p * iou_loss).exp()
             joint_prob = cls_prob * loc_prob
-            confidence = (joint_prob / self.temperature).exp()
+            confidence = (joint_prob.detach() / self.temperature).exp()
             gaussian_delta_mu = -(
                     (xy_offset[grid_idx, gt_idx, :] - gaussian[batch_targets[gt_idx, 1].long(), :2]) ** 2
             ).sum(-1)
             gaussian_delta_theta = 2 * ((gaussian[batch_targets[gt_idx, 1].long(), 2:]) ** 2).sum(-1)
             gaussian_weights = (gaussian_delta_mu / gaussian_delta_theta).exp()
             positive_weights = confidence * gaussian_weights
-
             positive_loss = torch.tensor(data=0., device=device)
             for unique_gt_idx in gt_idx.unique():
                 grid_idx_mask = gt_idx == unique_gt_idx
                 instance_weights = positive_weights[grid_idx_mask] / positive_weights[grid_idx_mask].sum()
                 instance_loss = -(instance_weights * joint_prob[grid_idx_mask]).sum().log()
-                # positive_prop = (instance_weights * joint_prob[grid_idx_mask]).sum()
-                # instance_loss = -self.alpha * (1 - positive_prop) ** self.gamma * positive_prop.log()
                 positive_loss += instance_loss
             positive_loss_list.append(positive_loss)
 
